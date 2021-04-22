@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"flag"
+	"fmt"
 	"github.com/aaronland/go-flickr-api/client"
 	"github.com/sfomuseum/go-flags/multi"
 	"github.com/sfomuseum/go-flickr-pip"
@@ -13,7 +14,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"sync"
+	"time"
 )
 
 func main() {
@@ -46,8 +47,6 @@ func main() {
 	wr := io.MultiWriter(writers...)
 	csv_wr := csv.NewWriter(wr)
 
-	mu := new(sync.RWMutex)
-
 	cb := func(ctx context.Context, fh io.ReadSeekCloser, err error) error {
 
 		if err != nil {
@@ -77,15 +76,15 @@ func main() {
 			lat := lat_rsp.Float()
 			lon := lon_rsp.Float()
 
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
 			rsp, err := pip_cl.Query(ctx, lat, lon)
 
 			if err != nil {
 				log.Printf("Unable to determine location for photo %d (at %f,%f), %v\n", ph_id, lat, lon, err)
 				continue
 			}
-
-			mu.Lock()
-			defer mu.Unlock()
 
 			for _, pl := range rsp.Places {
 				// log.Println(ph_id, lat, lon, pl.Id, pl.Placetype, pl.Name)
@@ -102,7 +101,7 @@ func main() {
 				err := csv_wr.Write(out)
 
 				if err != nil {
-					return err
+					return fmt.Errorf("Failed to write output, %v", err)
 				}
 			}
 
