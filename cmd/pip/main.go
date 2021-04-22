@@ -2,25 +2,27 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"flag"
-	"log"
-	"github.com/sfomuseum/go-flickr-pip"
 	"github.com/aaronland/go-flickr-api/client"
 	"github.com/sfomuseum/go-flags/multi"
+	"github.com/sfomuseum/go-flickr-pip"
 	"github.com/tidwall/gjson"
 	"io"
+	"log"
 	"net/url"
-	_ "os"
-	_ "fmt"
+	"os"
+	"strconv"
+	"sync"
 )
 
-func main(){
+func main() {
 
 	client_uri := flag.String("client-uri", "", "")
 
-	var params multi.KeyValueString	
+	var params multi.KeyValueString
 	flag.Var(&params, "param", "Zero or more {KEY}={VALUE} Flickr API parameters to include with your uploads.")
-	
+
 	flag.Parse()
 
 	ctx := context.Background()
@@ -37,6 +39,15 @@ func main(){
 		log.Fatalf("Failed to create new API client, %v", err)
 	}
 
+	writers := []io.Writer{
+		os.Stdout,
+	}
+
+	wr := io.MultiWriter(writers...)
+	csv_wr := csv.NewWriter(wr)
+
+	mu := new(sync.RWMutex)
+
 	cb := func(ctx context.Context, fh io.ReadSeekCloser, err error) error {
 
 		if err != nil {
@@ -48,36 +59,56 @@ func main(){
 		if err != nil {
 			return err
 		}
-		
+
 		photos_rsp := gjson.GetBytes(body, "photos.photo")
 
-		for _, ph := range photos_rsp.Array(){
-			
+		for _, ph := range photos_rsp.Array() {
+
 			lat_rsp := ph.Get("latitude")
 			lon_rsp := ph.Get("longitude")
 
-			if !lat_rsp.Exists() || !lon_rsp.Exists(){
+			if !lat_rsp.Exists() || !lon_rsp.Exists() {
 				continue
 			}
 
 			id_rsp := ph.Get("id")
 			ph_id := id_rsp.Int()
-			
+
 			lat := lat_rsp.Float()
 			lon := lon_rsp.Float()
 
 			rsp, err := pip_cl.Query(ctx, lat, lon)
 
 			if err != nil {
-				log.Println(lat, lon, err)
+				log.Printf("Unable to determine location for photo %d (at %f,%f), %v\n", ph_id, lat, lon, err)
 				continue
 			}
 
+			mu.Lock()
+			defer mu.Unlock()
+
 			for _, pl := range rsp.Places {
-				log.Println(ph_id, lat, lon, pl.Id, pl.Placetype, pl.Name)
+				// log.Println(ph_id, lat, lon, pl.Id, pl.Placetype, pl.Name)
+
+				out := []string{
+					strconv.FormatInt(ph_id, 10),
+					strconv.FormatFloat(lat, 'f', -1, 64),
+					strconv.FormatFloat(lon, 'f', -1, 64),
+					pl.Id,
+					pl.Name,
+					pl.Placetype,
+				}
+
+				err := csv_wr.Write(out)
+
+				if err != nil {
+					return err
+				}
 			}
+
+			csv_wr.Flush()
 		}
-		
+
 		return nil
 	}
 
@@ -86,13 +117,19 @@ func main(){
 	for _, kv := range params {
 		args.Set(kv.Key(), kv.Value().(string))
 	}
-	
-	err := client.ExecuteMethodPaginatedWithClient(ctx, api_cl, args, cb)
-	
+
+	err = client.ExecuteMethodPaginatedWithClient(ctx, api_cl, args, cb)
+
 	if err != nil {
 		log.Fatalf("Failed to write method results, %v", err)
 	}
-	
+
+	err = csv_wr.Error()
+
+	if err != nil {
+		log.Fatalf("Failed to write results, %v", err)
+	}
+
 }
 
 /*

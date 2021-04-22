@@ -3,8 +3,8 @@ package pip
 import (
 	"bytes"
 	"context"
-	"net/http"
 	"encoding/json"
+	"net/http"
 )
 
 type SPRResults struct {
@@ -12,14 +12,14 @@ type SPRResults struct {
 }
 
 type SPRResult struct {
-	Id string `json:"wof:id"`
-	ParentId string `json:"wof:parent_id"`
-	Name string `json:"wof:name"`
+	Id        string `json:"wof:id"`
+	ParentId  string `json:"wof:parent_id"`
+	Name      string `json:"wof:name"`
 	Placetype string `json:"wof:placetype"`
 }
 
 type PointInPolygonRequest struct {
-	Latitude float64 `json:"latitude"`
+	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 	IsCurrent []int64 `json:"is_current,omitempty"`
 }
@@ -42,9 +42,9 @@ func NewClient() (*Client, error) {
 func (cl *Client) Query(ctx context.Context, lat float64, lon float64) (*SPRResults, error) {
 
 	req := PointInPolygonRequest{
-		Latitude: lat,
+		Latitude:  lat,
 		Longitude: lon,
-		IsCurrent: []int64{ 1 },
+		IsCurrent: []int64{1},
 	}
 
 	body, err := json.Marshal(req)
@@ -54,7 +54,7 @@ func (cl *Client) Query(ctx context.Context, lat float64, lon float64) (*SPRResu
 	}
 
 	br := bytes.NewReader(body)
-	
+
 	http_req, err := http.NewRequest("POST", "http://localhost:8080/api/point-in-polygon", br)
 
 	if err != nil {
@@ -80,4 +80,3 @@ func (cl *Client) Query(ctx context.Context, lat float64, lon float64) (*SPRResu
 
 	return spr, nil
 }
-
