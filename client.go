@@ -7,6 +7,11 @@ import (
 	"net/http"
 )
 
+// SPRResults and SPRResult are simplified versions of
+// data-structures defined in:
+// https://github.com/whosonfirst/go-whosonfirst-spr/
+// https://github.com/whosonfirst/go-whosonfirst-sqlite-spr/
+
 type SPRResults struct {
 	Places []*SPRResult `json:"places"`
 }
@@ -17,6 +22,10 @@ type SPRResult struct {
 	Name      string `json:"wof:name"`
 	Placetype string `json:"wof:placetype"`
 }
+
+// PointInPolygonRequest is a simplified version of an
+// equivalent data-structure defined in:
+// https://github.com/whosonfirst/go-whosonfirst-spatial-pip/blob/main/pip.go
 
 type PointInPolygonRequest struct {
 	Latitude  float64 `json:"latitude"`

@@ -19,10 +19,10 @@ import (
 
 func main() {
 
-	client_uri := flag.String("client-uri", "", "")
+	client_uri := flag.String("client-uri", "", "A valid aaronland/go-flickr-api client URI.")
 
 	var params multi.KeyValueString
-	flag.Var(&params, "param", "Zero or more {KEY}={VALUE} Flickr API parameters to include with your uploads.")
+	flag.Var(&params, "param", "One or more {KEY}={VALUE} Flickr API parameters.")
 
 	flag.Parse()
 
@@ -47,6 +47,10 @@ func main() {
 	wr := io.MultiWriter(writers...)
 	csv_wr := csv.NewWriter(wr)
 
+	count := 0
+
+	// This is where we handle Flickr results
+
 	cb := func(ctx context.Context, fh io.ReadSeekCloser, err error) error {
 
 		if err != nil {
@@ -60,6 +64,8 @@ func main() {
 		}
 
 		photos_rsp := gjson.GetBytes(body, "photos.photo")
+
+		// This is where we reverse-geocode each Flickr photo
 
 		for _, ph := range photos_rsp.Array() {
 
@@ -79,6 +85,8 @@ func main() {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
 
+			// This is where we call the go-whosonfirst-spatial-www-* server
+
 			rsp, err := pip_cl.Query(ctx, lat, lon)
 
 			if err != nil {
@@ -87,7 +95,24 @@ func main() {
 			}
 
 			for _, pl := range rsp.Places {
-				// log.Println(ph_id, lat, lon, pl.Id, pl.Placetype, pl.Name)
+
+				if count == 0 {
+
+					out := []string{
+						"photo_id",
+						"latitude",
+						"longitude",
+						"whosonfirst_id",
+						"whosonfirst_name",
+						"whosonfirst_placetype",
+					}
+
+					err := csv_wr.Write(out)
+
+					if err != nil {
+						return fmt.Errorf("Failed to write output, %v", err)
+					}
+				}
 
 				out := []string{
 					strconv.FormatInt(ph_id, 10),
@@ -103,6 +128,8 @@ func main() {
 				if err != nil {
 					return fmt.Errorf("Failed to write output, %v", err)
 				}
+
+				count += 1
 			}
 
 			csv_wr.Flush()
@@ -130,15 +157,3 @@ func main() {
 	}
 
 }
-
-/*
-
-> go run -mod vendor cmd/pip/main.go -client-uri 'oauth1://?consumer_key=&consumer_secret=' -param method=flickr.photos.search -param user_id=161215698@N03 -param has_geo=1 -param extras=geo
-2021/04/21 18:25:38 51130478394 37.615555 -122.388889 1729792579 wing International Terminal
-2021/04/21 18:25:38 51130478394 37.615555 -122.388889 1729792387 building SFO Terminal Complex
-2021/04/21 18:25:38 51130478394 37.615555 -122.388889 1729792387 building SFO Terminal Complex
-2021/04/21 18:25:38 51130478394 37.615555 -122.388889 1729792679 concourse International Terminal Main Hall
-2021/04/21 18:25:38 51130478394 37.615555 -122.388889 1729792681 concourse International Terminal Connector
-2021/04/21 18:25:38 51131288670 37.612777 -122.361112 1730008749 custom RUNWAY 10R/28L
-
-*/
