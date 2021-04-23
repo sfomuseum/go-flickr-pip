@@ -1,7 +1,13 @@
+# go-flickr-pip
+
+Tools for reverse-geocoding geotagged Flickr photos using the Flickr API and the go-whosonfirst-spatial package.
+
+## Example
+
 ...openly-licensed and geotagged photos from the [airports-sfo](https://www.flickr.com/groups/airports-sfo/pool/) Flickr group:
 
 ```
-$> bin/pip \
+$> go run -mod vendor cmd/pip/main.go \
 	-client-uri 'oauth1://?consumer_key=...&consumer_secret=...' \
 	-param method=flickr.photos.search \
 	-param group_id=95693046@N00 \
@@ -25,3 +31,8 @@ photo_id,latitude,longitude,whosonfirst_id,whosonfirst_name,whosonfirst_placetyp
 50654966103,37.616339,-122.387223,1360665043,Central Parking Garage,wing
 ... and so on
 ```	
+
+## See also
+
+* https://github.com/aaronland/go-flickr-api
+* https://github.com/whosonfirst/go-whosonfirst-spatial-www-sqlite
