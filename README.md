@@ -6,6 +6,8 @@ Tools for reverse-geocoding geotagged Flickr photos using the Flickr API and the
 
 These tools are still in active development.
 
+For background have a look at the [Updating (and reverse-geocoding) GPS EXIF metadata](https://millsfield.sfomuseum.org/blog/2021/04/26/exif-gps/) blog post.
+
 ## Example
 
 ### Step 1
