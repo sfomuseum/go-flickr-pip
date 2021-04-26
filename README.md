@@ -2,6 +2,10 @@
 
 Tools for reverse-geocoding geotagged Flickr photos using the Flickr API and the go-whosonfirst-spatial package.
 
+## Important
+
+These tools are still in active development.
+
 ## Example
 
 ### Step 1
